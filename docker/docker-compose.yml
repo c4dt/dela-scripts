@@ -1,0 +1,93 @@
+version: "3.8"
+x-dela: &dela
+  image: ghcr.io/c4dt/d-voting-dela:latest
+  env_file: .env
+  restart: unless-stopped
+  networks:
+    - proxy
+x-dela-env: &dela-env
+  PROXYKEY: ${PUBLIC_KEY}
+  PROXY_LOG: info
+  LLVL: debug
+
+services:
+
+  dela-worker-1:             # initial DELA leader node
+    environment:
+      <<: *dela-env
+    volumes:
+      - ./data/worker-1:/data
+    <<: *dela
+    labels:
+      - "traefik.enable=true"
+
+      - "traefik.http.routers.dela-1-main.rule=Host(`proxy.dela-1.c4dt.org`)"
+      - "traefik.http.routers.dela-1-main.entryPoints=web-secure"
+      - "traefik.http.routers.dela-1-main.service=dela-1-proxy"
+      - "traefik.http.routers.dela-1-main.priority=500"
+      - "traefik.http.routers.dela-1-main.tls=true"
+      - "traefik.http.routers.dela-1-main.tls.certResolver=sample"
+
+      - "traefik.http.services.dela-1-proxy.loadbalancer.server.port=8080"
+      - "traefik.http.services.dela-1-proxy.loadbalancer.server.scheme=http"
+
+      - "traefik.http.routers.dela-1-service.rule=Host(`node.dela-1.c4dt.org`)"
+      - "traefik.http.routers.dela-1-service.entryPoints=web-secure"
+      - "traefik.http.routers.dela-1-service.service=dela-1-worker"
+      - "traefik.http.routers.dela-1-service.priority=1000"
+      - "traefik.http.routers.dela-1-service.tls=true"
+      - "traefik.http.routers.dela-1-service.tls.certResolver=sample"
+
+      - "traefik.http.services.dela-1-worker.loadbalancer.server.port=2000"
+      - "traefik.http.services.dela-1-worker.loadbalancer.server.scheme=h2c"
+      - "traefik.docker.network=proxy"
+
+  frontend:         # web service frontend
+    labels:
+      - "traefik.enable=true"
+
+      - "traefik.http.routers.dvoting-main.rule=Host(`dvoting.c4dt.org`)"
+      - "traefik.http.routers.dvoting-main.entryPoints=web-secure"
+      - "traefik.http.routers.dvoting-main.service=dvoting"
+      - "traefik.http.routers.dvoting-main.priority=500"
+      - "traefik.http.routers.dvoting-main.tls=true"
+      - "traefik.http.routers.dvoting-main.tls.certResolver=sample"
+
+      - "traefik.http.services.dvoting.loadbalancer.server.port=3000"
+      - "traefik.http.services.dvoting.loadbalancer.server.scheme=http"
+      - "traefik.docker.network=proxy"
+    image: ghcr.io/c4dt/d-voting-frontend:latest
+    env_file: .env
+    networks:
+      - proxy
+
+  backend:          # web service backend
+    image: ghcr.io/c4dt/d-voting-backend:latest
+    build:
+      dockerfile: Dockerfiles/Dockerfile.backend
+      context: ../
+    env_file: .env
+    depends_on:
+      db:
+        condition: service_started
+    volumes:
+      - ./data/backend:/data
+    networks:
+      - proxy
+    restart: unless-stopped
+
+  db:               # PostgreSQL database
+    image: postgres:15
+    environment:
+      POSTGRES_USER: ${DATABASE_USERNAME}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+      - ./d-voting/web/backend/src/migration.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - proxy
+    restart: unless-stopped
+
+networks:
+  proxy:
+    external: true

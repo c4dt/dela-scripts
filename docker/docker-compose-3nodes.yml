@@ -1,0 +1,109 @@
+version: "3.8"
+x-dela-env: &dela-env
+  PROXYKEY: ${PUBLIC_KEY}
+  PROXY_LOG: info
+  LLVL: debug
+x-dela: &dela
+  image: ghcr.io/c4dt/d-voting-dela:latest
+  env_file: .env
+  restart: unless-stopped
+  networks:
+    - proxy
+
+
+services:
+
+  dela-worker-2:
+    <<: *dela
+    environment:
+      PUBLIC_URL: https://node.dela-2.c4dt.org:443      # public DELA node URL
+      <<: *dela-env
+    volumes:
+      - ./data/worker-2:/data
+    labels:
+      - "traefik.enable=true"
+
+      - "traefik.http.routers.dela-2-main.rule=Host(`proxy.dela-2.c4dt.org`)"
+      - "traefik.http.routers.dela-2-main.entryPoints=web-secure"
+      - "traefik.http.routers.dela-2-main.service=dela-2-proxy"
+      - "traefik.http.routers.dela-2-main.priority=500"
+      - "traefik.http.routers.dela-2-main.tls=true"
+      - "traefik.http.routers.dela-2-main.tls.certResolver=sample"
+
+      - "traefik.http.services.dela-2-proxy.loadbalancer.server.port=8080"
+      - "traefik.http.services.dela-2-proxy.loadbalancer.server.scheme=http"
+
+      - "traefik.http.routers.dela-2-service.rule=Host(`node.dela-2.c4dt.org`)"
+      - "traefik.http.routers.dela-2-service.entryPoints=web-secure"
+      - "traefik.http.routers.dela-2-service.service=dela-2-worker"
+      - "traefik.http.routers.dela-2-service.priority=1000"
+      - "traefik.http.routers.dela-2-service.tls=true"
+      - "traefik.http.routers.dela-2-service.tls.certResolver=sample"
+
+      - "traefik.http.services.dela-2-worker.loadbalancer.server.port=2000"
+      - "traefik.http.services.dela-2-worker.loadbalancer.server.scheme=h2c"
+
+  dela-worker-3:
+    <<: *dela
+    environment:
+      PUBLIC_URL: https://node.dela-3.c4dt.org:443      # public DELA node URL
+      <<: *dela-env
+    volumes:
+      - ./data/worker-3:/data
+    labels:
+      - "traefik.enable=true"
+
+      - "traefik.http.routers.dela-3-main.rule=Host(`proxy.dela-3.c4dt.org`)"
+      - "traefik.http.routers.dela-3-main.entryPoints=web-secure"
+      - "traefik.http.routers.dela-3-main.service=dela-3-proxy"
+      - "traefik.http.routers.dela-3-main.priority=500"
+      - "traefik.http.routers.dela-3-main.tls=true"
+      - "traefik.http.routers.dela-3-main.tls.certResolver=sample"
+
+      - "traefik.http.services.dela-3-proxy.loadbalancer.server.port=8080"
+      - "traefik.http.services.dela-3-proxy.loadbalancer.server.scheme=http"
+
+      - "traefik.http.routers.dela-3-service.rule=Host(`node.dela-3.c4dt.org`)"
+      - "traefik.http.routers.dela-3-service.entryPoints=web-secure"
+      - "traefik.http.routers.dela-3-service.service=dela-3-worker"
+      - "traefik.http.routers.dela-3-service.priority=1000"
+      - "traefik.http.routers.dela-3-service.tls=true"
+      - "traefik.http.routers.dela-3-service.tls.certResolver=sample"
+
+      - "traefik.http.services.dela-3-worker.loadbalancer.server.port=2000"
+      - "traefik.http.services.dela-3-worker.loadbalancer.server.scheme=h2c"
+
+  dela-worker-4:
+    <<: *dela
+    environment:
+      PUBLIC_URL: https://node.dela-4.c4dt.org:443      # public DELA node URL
+      <<: *dela-env
+    volumes:
+      - ./data/worker-4:/data
+    labels:
+      - "traefik.enable=true"
+
+      - "traefik.http.routers.dela-4-main.rule=Host(`proxy.dela-4.c4dt.org`)"
+      - "traefik.http.routers.dela-4-main.entryPoints=web-secure"
+      - "traefik.http.routers.dela-4-main.service=dela-4-proxy"
+      - "traefik.http.routers.dela-4-main.priority=500"
+      - "traefik.http.routers.dela-4-main.tls=true"
+      - "traefik.http.routers.dela-4-main.tls.certResolver=sample"
+
+      - "traefik.http.services.dela-4-proxy.loadbalancer.server.port=8080"
+      - "traefik.http.services.dela-4-proxy.loadbalancer.server.scheme=http"
+
+      - "traefik.http.routers.dela-4-service.rule=Host(`node.dela-4.c4dt.org`)"
+      - "traefik.http.routers.dela-4-service.entryPoints=web-secure"
+      - "traefik.http.routers.dela-4-service.service=dela-4-worker"
+      - "traefik.http.routers.dela-4-service.priority=1000"
+      - "traefik.http.routers.dela-4-service.tls=true"
+      - "traefik.http.routers.dela-4-service.tls.certResolver=sample"
+
+      - "traefik.http.services.dela-4-worker.loadbalancer.server.port=2000"
+      - "traefik.http.services.dela-4-worker.loadbalancer.server.scheme=h2c"
+
+networks:
+  proxy:
+    external: true
+
